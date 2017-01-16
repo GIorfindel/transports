@@ -51,9 +51,6 @@ def main(args: Array[String]) {
 	      val itinFuture = Unmarshal(response.entity).to[Itineraire]
 	      //val t = Await.result(itinFuture,10.second)
 	      //println(t)
-	      /*onSuccess(ticker) {
-            	case transit => println(transit)
-	      }*/
 	      Future{akka.Done}
             }
 	    case status =>{
