@@ -75,7 +75,7 @@ def main(args: Array[String]) {
 	implicit val executionContext = system.dispatcher
 
 	val connection = Http().outgoingConnection("maps.googleapis.com", 80)
-	val request:HttpRequest = RequestBuilding.Get(s"/maps/api/directions/json?origin=26+rue+gaston,+daguenet,+france&destination=universite+paris+13+villetaneuse+france&mode=transit&key=AIzaSyBQnr9uPGyQtYnIk_kbD_MmzV9hYfyqOXM")
+	val request:HttpRequest = RequestBuilding.Get(s"/maps/api/directions/json?origin=26+rue+gaston,+daguenet,+france&destination=universite+paris+13+villetaneuse+france&mode=transit&key=KEY_A_REMPLIR")
 	request.addHeader(HttpHeader("User-Agent",""))
 	Source.single(request).via(connection).runWith(Sink.head).flatMap { response =>
 		
