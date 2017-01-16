@@ -38,7 +38,7 @@ function filtre(itineraire,res){
 }
 
 let urlGoogle = 'https://maps.googleapis.com/maps/api/directions/json?'
-let queryGoogleFin = '&mode=transit&key=AIzaSyBQnr9uPGyQtYnIk_kbD_MmzV9hYfyqOXM'
+let queryGoogleFin = '&mode=transit&key=KEY_A_REMPLIR'
 
 function creeUrl(origine,destination){
   return urlGoogle + 'origin=' + origine + '&destination=' + destination + queryGoogleFin
