@@ -49,8 +49,8 @@ def main(args: Array[String]) {
 	  response.status match {
 	    case status if status.isSuccess =>{
 	      val itinFuture = Unmarshal(response.entity).to[Itineraire]
-	      //val t = Await.result(itinFuture,10.second)
-	      //println(t)
+	      val t = Await.result(itinFuture,10.second)
+	      println(t)
 	      Future{akka.Done}
             }
 	    case status =>{
