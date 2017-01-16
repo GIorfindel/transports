@@ -1,0 +1,7 @@
+{
+ "verbose": true,
+ "cwd": "__dirname",
+ "ext": "js json njk",
+ "watch": ["src"],
+ "delay": 1000
+ }
