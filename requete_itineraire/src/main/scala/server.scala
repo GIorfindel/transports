@@ -30,7 +30,7 @@ case class Leg(arrival_time:Text,departure_time:Text,distance:Text,duration:Text
 case class Route(legs:List[Leg])
 case class Transit(status:String,routes:List[Route])
 
-object ClientJson extends DefaultJsonProtocol with SprayJsonSupport {
+object JsonFormatTransit extends DefaultJsonProtocol with SprayJsonSupport {
 	implicit val nameF = jsonFormat1(Name)
 	implicit val textF = jsonFormat1(Text)
 	implicit val lineF = jsonFormat3(Line)
@@ -43,25 +43,28 @@ object ClientJson extends DefaultJsonProtocol with SprayJsonSupport {
 
 
 object gooleApi {
-  def main(args: Array[String]) {
-    import ClientJson._
-    implicit val system = ActorSystem()
-    implicit val materializer = ActorMaterializer()
-    implicit val executionContext = system.dispatcher
-    //implicit val timeout = Timeout(5)
-    val duration = Duration(15000, MILLISECONDS)
+	def main(args: Array[String]) {
+		import JsonFormatTransit._
+		implicit val system = ActorSystem()
+		implicit val materializer = ActorMaterializer()
+		implicit val executionContext = system.dispatcher
+		val duration = Duration(15000, MILLISECONDS)
 
-    val responseFuture: Future[HttpResponse] =
-    Http().singleRequest(HttpRequest(uri = "https://maps.googleapis.com/maps/api/directions/json?origin=gare+saint+lazarre+paris+france&destination=universite+paris+13+villetaneuse+france&mode=transit&key=METTRE_TA_CLE"))
-    val result = Await.result(responseFuture, duration).asInstanceOf[HttpResponse]
-    result._1.intValue() match
-    {
-      case 200 =>{ println("SMS envoyé") 
-		val ticker = Unmarshal(result.entity).to[Transit]
-		val t = Await.result(ticker,10.second)
-	      	println(t)
-	}
-      case 500 => println("Erreur du serveur, veuillez réessayer")
-    }
-  }
+		val origin = "gare+saint+lazarre+paris+france"
+		val destination = "universite+paris+13+villetaneuse+france"
+
+		val responseFuture: Future[HttpResponse] =
+		Http().singleRequest(HttpRequest(uri = s"https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=transit&key=TA_CLE"))
+		val result = Await.result(responseFuture, duration).asInstanceOf[HttpResponse]
+		result._1.intValue() match
+		{
+			case 200 =>{
+				println("SMS envoyé")
+				val ticker = Unmarshal(result.entity).to[Transit]
+				val t = Await.result(ticker,10.second)
+				println(t)
+			}
+			case 500 => println("Erreur du serveur, veuillez réessayer")
+		}
+  	}
 }
