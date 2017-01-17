@@ -1,25 +1,16 @@
 import akka.actor.Actor
-import akka.stream.scaladsl.Sink
 import akka.http.scaladsl.client._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.http.scaladsl.marshalling.Marshal
-import akka.stream.scaladsl.Source
 import akka.stream.ActorMaterializer
-import akka.stream.ActorMaterializerSettings
-import akka.actor.{ ActorRef, ActorSystem, Props, Actor, Inbox }
-import akka.util.ByteString
-import java.util.concurrent.CompletionStage
+import akka.actor.ActorSystem
 import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json.DefaultJsonProtocol
-import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import akka.http.scaladsl.Http
-import akka.util.Timeout
 import java.util.concurrent.TimeUnit
-import scala.util.{ Failure, Success }
 
 case class Text(text:String)
 case class Name(name:String)
