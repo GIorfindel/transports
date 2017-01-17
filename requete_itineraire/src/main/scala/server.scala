@@ -59,7 +59,6 @@ object gooleApi {
 		result._1.intValue() match
 		{
 			case 200 =>{
-				println("SMS envoyé")
 				val ticker = Unmarshal(result.entity).to[Transit]
 				val t = Await.result(ticker,10.second)
 				println(t)
