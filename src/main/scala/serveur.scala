@@ -56,7 +56,7 @@ import spray.json.DefaultJsonProtocol
     }
     def receive = {
       case Status(msg) => println(msg)
-      case TrajetGoogle(trajet) => println(trajet)
+      case TrajetGoogle(trajet) => trajet.routes.foreach{_.legs.foreach{_.steps.foreach{_.transit_details.foreach{x => context.actorOf(Props(new apitPerturbation(x.line.short_name)))}}}} //val heure=println(trajet.routes(0).legs(0).arrival_time)
       case Perturbation(ligne) => val sms = context.actorOf(Props(new Free(idmdp.get)));sms ! Message("Perturbations%20sur%20la%20ligne%20"+ligne)
     }
   }
@@ -82,9 +82,12 @@ import spray.json.DefaultJsonProtocol
     }
   }
 
-  /*class apitPerturbation(depart: String, destination: String) extends Actor{
-
-  }*/
+  class apitPerturbation(ligne: String) extends Actor{
+    println(ligne)
+    def receive={
+      case _ =>
+    }
+  }
 
   class apiTrajet() extends Actor{
     import JsonFormatTransit._
