@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>The Scala.js Tutorial</title>
+</head>
+
+<body>
+    <!-- Include JavaScript dependencies -->
+    <script type="text/javascript" src="jsdep"></script>
+    <!-- Include Scala.js compiled code -->
+    <script type="text/javascript" src="fastop"></script>
+    <!-- Run tutorial.webapp.TutorialApp -->
+
+    <form id="rechItin">
+        <input type="text" name="origine" />
+        <input type="text" name="destination" />
+        <input type="submit" value="Rechercher Itineraire" />
+    </form>
+
+    <h3>Itineraire</h3>
+    <div id="iti">
+
+    </div>
+
+    <script type="text/javascript">
+        tutorial.webapp.TutorialApp().main();
+    </script>
+</body>
+
+</html>
