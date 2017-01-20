@@ -2406,14 +2406,14 @@ $h_Ltutorial_webapp_TutorialApp$.prototype = $c_Ltutorial_webapp_TutorialApp$.pr
 $c_Ltutorial_webapp_TutorialApp$.prototype.init___ = (function() {
   return this
 });
-$c_Ltutorial_webapp_TutorialApp$.prototype.main__V = (function() {
-  (0, $m_Lorg_scalajs_jquery_package$().jQuery$1)((function() {
-    $m_Ltutorial_webapp_TutorialApp$().setupUI__V()
-  }))
-});
-$c_Ltutorial_webapp_TutorialApp$.prototype.setupUI__V = (function() {
-  $m_Lorg_scalajs_jquery_package$().jQuery$1.ajax({
-    "url": "http://localhost:8080/api",
+$c_Ltutorial_webapp_TutorialApp$.prototype.rechItin__Lorg_scalajs_jquery_JQueryEventObject__V = (function(e) {
+  e.preventDefault();
+  var ori = (0, $m_Lorg_scalajs_jquery_package$().jQuery$1)("#ori").val().replace(32, 43);
+  var dest = (0, $m_Lorg_scalajs_jquery_package$().jQuery$1)("#dest").val().replace(32, 43);
+  var jsx$1 = $m_Lorg_scalajs_jquery_package$().jQuery$1;
+  var s = ((("http://localhost:8080/api?origine=" + ori) + "&destination=") + dest);
+  jsx$1.ajax({
+    "url": s,
     "success": (function(data$2, textStatus$2, jqXHR$2) {
       $as_T(textStatus$2);
       var json = $g.JSON.parse($as_T(jqXHR$2.responseText));
@@ -2423,12 +2423,22 @@ $c_Ltutorial_webapp_TutorialApp$.prototype.setupUI__V = (function() {
       var textStatus$1 = $as_T(textStatus$2$1);
       var errorThrow = $as_T(errorThrow$2);
       var x = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["jqXHR=", ",text=", ",err=", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jqXHR$2$1, textStatus$1, errorThrow]));
-      var this$3 = $m_s_Console$();
-      var this$4 = $as_Ljava_io_PrintStream(this$3.outVar$2.v$1);
-      this$4.java$lang$JSConsoleBasedPrintStream$$printString__T__V((x + "\n"))
+      var this$7 = $m_s_Console$();
+      var this$8 = $as_Ljava_io_PrintStream(this$7.outVar$2.v$1);
+      this$8.java$lang$JSConsoleBasedPrintStream$$printString__T__V((x + "\n"))
     }),
     "type": "GET"
   })
+});
+$c_Ltutorial_webapp_TutorialApp$.prototype.main__V = (function() {
+  (0, $m_Lorg_scalajs_jquery_package$().jQuery$1)((function() {
+    $m_Ltutorial_webapp_TutorialApp$().setupUI__V()
+  }))
+});
+$c_Ltutorial_webapp_TutorialApp$.prototype.setupUI__V = (function() {
+  (0, $m_Lorg_scalajs_jquery_package$().jQuery$1)("#rechItin").submit((function(e$2) {
+    $m_Ltutorial_webapp_TutorialApp$().rechItin__Lorg_scalajs_jquery_JQueryEventObject__V(e$2)
+  }))
 });
 $c_Ltutorial_webapp_TutorialApp$.prototype.$$js$exported$meth$main__O = (function() {
   this.main__V()

@@ -60,40 +60,40 @@ object WebServer{
 		 } ~
 		 path("jsdep") {
  			 get {
-				 println("a")
  				 getFromFile("js/scala-js-tutorial-jsdeps.js")
  			 }
  		 } ~
 		 path("fastop") {
  			 get {
-				 println("b")
  				 getFromFile("js/scala-js-tutorial-fastopt.js")
  			 }
  		 } ~
     path("api") {
         get {
-          val duration = Duration(15000, MILLISECONDS)
+					parameters('origine, 'destination) { (orig, dest) =>
+	          val duration = Duration(15000, MILLISECONDS)
+						val origin = orig.replace(' ', '+')
+						val destination = dest.replace(' ', '+')
+	      		//val origin = "gare+saint+lazarre+paris+france"
+	      		//val destination = "universite+paris+13+villetaneuse+france"
+	          val key = "TA_CLE"
 
-      		val origin = "gare+saint+lazarre+paris+france"
-      		val destination = "universite+paris+13+villetaneuse+france"
-          val key = "AIzaSyAg6ChJyWkZjGDoEwKbWw5qnXaoLN9bVb8"
-
-      		val responseFuture: Future[HttpResponse] =
-      		Http().singleRequest(HttpRequest(uri = s"https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=transit&key=${key}"))
-      		val result = Await.result(responseFuture, duration).asInstanceOf[HttpResponse]
-      		result._1.intValue() match
-      		{
-      			case 200 =>{
-      				val ticker = Unmarshal(result.entity).to[Transit]
-      				val t = Await.result(ticker,10.second)
-      				println(t)
-              complete(t)
-      			}
-      			case 500 =>{
-              println("Erreur du serveur, veuillez réessayer")
-              complete("erreur")
-            }
-      		}
+	      		val responseFuture: Future[HttpResponse] =
+	      		Http().singleRequest(HttpRequest(uri = s"https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=transit&key=${key}"))
+	      		val result = Await.result(responseFuture, duration).asInstanceOf[HttpResponse]
+	      		result._1.intValue() match
+	      		{
+	      			case 200 =>{
+	      				val ticker = Unmarshal(result.entity).to[Transit]
+	      				val t = Await.result(ticker,10.second)
+	              complete(t)
+	      			}
+	      			case 500 =>{
+	              println("Erreur du serveur, veuillez réessayer")
+	              complete("erreur")
+	            }
+	      		}
+					}
         }
       }
 

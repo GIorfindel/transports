@@ -35,10 +35,12 @@ object TutorialApp extends JSApp {
 		}
 	}
 
-	def setupUI(): Unit = {
-		//jQuery("#rechItin").submit(rechItin _)
+	def rechItin(e:JQueryEventObject): Unit = {
+		e.preventDefault()
+		val ori = jQuery("#ori").value().replace(' ', '+')
+		val dest = jQuery("#dest").value().replace(' ', '+')
 		jQuery.ajax(js.Dynamic.literal(
-    			url = "http://localhost:8080/api",
+    			url = "http://localhost:8080/api?origine="+ori+"&destination="+dest,
     			success = { (data: js.Any, textStatus: String, jqXHR: JQueryXHR) =>
       				val json = js.JSON.parse(jqXHR.responseText)
 							jQuery("#iti").html(afficheIti(json))
@@ -48,6 +50,10 @@ object TutorialApp extends JSApp {
     			},
     			`type` = "GET"
 			).asInstanceOf[JQueryAjaxSettings])
+	}
+
+	def setupUI(): Unit = {
+		jQuery("#rechItin").submit(rechItin _)
 	}
 
 	def main(): Unit = {
