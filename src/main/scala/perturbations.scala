@@ -20,16 +20,28 @@ import akka.http.scaladsl.model.headers._
 
 object Perturbations {
 
-  final case class Type(name: String)
-  final case class Ligne(code: String, name: String, physical_modes: List[Type], text_color: String, color: String, id: String)
-  final case class Reseau(lines: List[Ligne])
+    // Classes pour les requetes de lignes
+    final case class Type(name: String)
+    final case class Ligne(code: String, name: String, physical_modes: List[Type], text_color: String, color: String, id: String)
+    final case class Reseau(lines: List[Ligne])
 
-  implicit val typeFormat = jsonFormat1(Type)
-  implicit val ligneFormat = jsonFormat6(Ligne)
-  implicit val reseauFormat = jsonFormat1(Reseau)
+    implicit val typeFormat = jsonFormat1(Type)
+    implicit val ligneFormat = jsonFormat6(Ligne)
+    implicit val reseauFormat = jsonFormat1(Reseau)
 
-  final case class Departures()
 
+    // ICI
+    // Classes pour les requetes de departs
+    case class DInformations(direction: String, headsign: String)
+    case class Informations(display_informations: Option[DInformations])
+    final case class Departs(departures: Informations)
+
+    implicit val dinformationsFormat = jsonFormat2(DInformations)
+    implicit val informationsFormat = jsonFormat1(Informations)
+    implicit val departuresFormat = jsonFormat1(Departs)
+
+
+  // Correspondance entre les type de ligne Google et Navitia
   def getType(str: String): String = str match {
     case "Bus" => "Bus"
     case "Train" => "RapidTransit"
@@ -37,12 +49,14 @@ object Perturbations {
     case "Metro" => "Metro"
   }
 
+  // Récupérer la bonne ligne de transport dans une liste
   def getLigne(nomLigne: String, reseau: Reseau): Option[Ligne] = {
     (reseau.lines.find(ligne => ligne.code == nomLigne)) match {
       case Some(t) => Some(t)
       case _ => None
     }
   }
+
 
   def main(args: Array[String]) {
 
@@ -55,39 +69,66 @@ object Perturbations {
 
     val duration = Duration(15000, MILLISECONDS)
 
-    // Token Navitia
-    val authorization = headers.Authorization(BasicHttpCredentials("232e61e7-8b77-4a6b-8bc2-7b6dd2732d37", ""))
+    // Requete pour récupérer les lignes du réseau selon son type (bus, train, etc.)
+    def getReseau(uri: String, key:String) = {
+      val authorization = headers.Authorization(BasicHttpCredentials(key, ""))
+      val requeteReseau: Future[HttpResponse] =
+        Http().singleRequest(HttpRequest(
+          uri = uri,
+          headers = List(authorization)
+        ))
+      val reponseReseau = Await.result(requeteReseau, duration).asInstanceOf[HttpResponse]
+      reponseReseau._1.intValue() match {
+        case 200 => {
 
-    // On recupere les transports du bon type
-    val responseFuture: Future[HttpResponse] =
-      Http().singleRequest(HttpRequest(
-        uri = "https://api.navitia.io/v1/coverage/fr-idf/physical_modes/physical_mode:" + typeLigne + "/lines?count=1000&start_page=0",
-        headers = List(authorization)))
-
-    val result = Await.result(responseFuture, duration).asInstanceOf[HttpResponse]
-    result._1.intValue() match {
-      case 200 => {
-        val ticker = Unmarshal(result.entity).to[Reseau]
-        val res = Await.result(ticker, 10.second)
-
-        // On regarde si le nom de la ligne reçu existe dans les donnees
-        val testLigne = getLigne(nomLigne, res)
-        if(testLigne.isDefined)  {
-          // Si la ligne existe, on récupère sa ligne
-          val ligne = testLigne.get
-          println(ligne)
-          // On récupère les infos sur la ligne
-          /*val responseFuture: Future[HttpResponse] =
-            Http().singleRequest(HttpRequest(
-              uri = "https://api.navitia.io/v1/coverage/fr-idf/physical_modes/physical_mode:" + typeLigne + "/lines/"+ligne.id,
-              headers = List(authorization)))*/
-
+          val ticker = Unmarshal(reponseReseau.entity).to[Reseau]
+          val res = Await.result(ticker, 10.second)
+          surveilleLigne(res)
         }
-        else {
-          println("Cette ligne n'existe pas")
-        }
+        case 500 => println("Erreur du serveur, veuillez réessayer")
       }
-      case 500 => println("Erreur du serveur, veuillez réessayer")
     }
+
+    // Requete pour récupérer les départs
+    def getDeparts(uri: String, key:String) = {
+      val authorization = headers.Authorization(BasicHttpCredentials(key, ""))
+      val requeteReseau: Future[HttpResponse] =
+        Http().singleRequest(HttpRequest(
+          uri = uri,
+          headers = List(authorization)
+        ))
+      val reponseReseau = Await.result(requeteReseau, duration).asInstanceOf[HttpResponse]
+      reponseReseau._1.intValue() match {
+        case 200 => {
+          val ticker = Unmarshal(reponseReseau.entity).to[Departs]
+          val res = Await.result(ticker, 10.second)
+          println(res)
+        }
+        case 500 => println("Erreur du serveur, veuillez réessayer")
+      }
+    }
+
+    // On récupère les départs de la ligne et on commence la surveillance
+    def surveilleLigne(res:Reseau) = {
+      val testLigne = getLigne(nomLigne, res)
+      if (testLigne.isDefined) {
+        // Si la ligne existe, on récupère sa ligne
+        val ligne = testLigne.get
+        println(ligne)
+        // On récupère les infos sur la ligne
+        val key = "232e61e7-8b77-4a6b-8bc2-7b6dd2732d37"
+        val uri = "https://api.navitia.io/v1/coverage/fr-idf/physical_modes/physical_mode:" + typeLigne + "/lines/" + ligne.id + "/departures"
+        getDeparts(uri, key)
+      } else {
+        println("Cette ligne n'existe pas")
+      }
+    }
+
+    // Token Navitia
+    val key = "232e61e7-8b77-4a6b-8bc2-7b6dd2732d37"
+    val uri1 = "https://api.navitia.io/v1/coverage/fr-idf/physical_modes/physical_mode:" + typeLigne + "/lines?count=1000"
+    getReseau(uri1, key)
+
+
   }
 }
