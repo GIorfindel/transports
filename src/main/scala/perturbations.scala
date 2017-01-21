@@ -32,12 +32,16 @@ object Perturbations {
 
     // ICI
     // Classes pour les requetes de departs
-    case class DInformations(direction: String, headsign: String)
-    case class Informations(display_informations: Option[DInformations])
-    final case class Departs(departures: Informations)
+    final case class Display(direction: String, headsign: String)
+    final case class StopPoint(name: String)
+    final case class StopDate(arrival_date_time: String, departure_date_time: String, base_arrival_date_time: String, base_departure_date_time: String, data_freshness: String)
+    final case class Informations(display_informations: Display, stop_point: StopPoint, stop_date_time: StopDate)
+    final case class Departs(departures: List[Informations])
 
-    implicit val dinformationsFormat = jsonFormat2(DInformations)
-    implicit val informationsFormat = jsonFormat1(Informations)
+    implicit val stopDateFormat = jsonFormat5(StopDate)
+    implicit val stopPointFormat = jsonFormat1(StopPoint)
+    implicit val DisplayFormat = jsonFormat2(Display)
+    implicit val informationsFormat = jsonFormat3(Informations)
     implicit val departuresFormat = jsonFormat1(Departs)
 
 
@@ -83,7 +87,7 @@ object Perturbations {
 
           val ticker = Unmarshal(reponseReseau.entity).to[Reseau]
           val res = Await.result(ticker, 10.second)
-          surveilleLigne(res)
+          verifieLigne(res)
         }
         case 500 => println("Erreur du serveur, veuillez réessayer")
       }
@@ -102,14 +106,14 @@ object Perturbations {
         case 200 => {
           val ticker = Unmarshal(reponseReseau.entity).to[Departs]
           val res = Await.result(ticker, 10.second)
-          println(res)
+          surveilleLigne(res)
         }
         case 500 => println("Erreur du serveur, veuillez réessayer")
       }
     }
 
-    // On récupère les départs de la ligne et on commence la surveillance
-    def surveilleLigne(res:Reseau) = {
+    // On vérifie les infos de la ligne
+    def verifieLigne(res:Reseau) = {
       val testLigne = getLigne(nomLigne, res)
       if (testLigne.isDefined) {
         // Si la ligne existe, on récupère sa ligne
@@ -122,6 +126,11 @@ object Perturbations {
       } else {
         println("Cette ligne n'existe pas")
       }
+    }
+
+    // On récupère les départs de la ligne et on commence la surveillance
+    def surveilleLigne(departs:Departs) = {
+      departs.departures.foreach(depart => println(depart))
     }
 
     // Token Navitia
