@@ -17,6 +17,8 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.Await
 import akka.http.scaladsl.model._
 import spray.json.DefaultJsonProtocol
+import java.util.Calendar
+import java.text.SimpleDateFormat
 
   //Classes pour l'api de trajet
   case class Text(text:String)
@@ -56,7 +58,7 @@ import spray.json.DefaultJsonProtocol
     }
     def receive = {
       case Status(msg) => println(msg)
-      case TrajetGoogle(trajet) => trajet.routes.foreach{_.legs.foreach{_.steps.foreach{_.transit_details.foreach{x => context.actorOf(Props(new apitPerturbation(x.line.short_name)))}}}} //val heure=println(trajet.routes(0).legs(0).arrival_time)
+      case TrajetGoogle(trajet) => trajet.routes.foreach{_.legs.foreach{_.steps.foreach{_.transit_details.foreach{x => context.actorOf(Props(new apitPerturbation(x.line.short_name, x.departure_time, x.line.vehicle)))}}}} //val heure=println(trajet.routes(0).legs(0).arrival_time)
       case Perturbation(ligne) => val sms = context.actorOf(Props(new Free(idmdp.get)));sms ! Message("Perturbations%20sur%20la%20ligne%20"+ligne)
     }
   }
@@ -82,8 +84,20 @@ import spray.json.DefaultJsonProtocol
     }
   }
 
-  class apitPerturbation(ligne: String) extends Actor{
-    println(ligne)
+  class apitPerturbation(ligne: String, heure: Text, nom: Name) extends Actor{
+    val simpDate = new SimpleDateFormat("hh:mm");
+    val now = (simpDate.format(Calendar.getInstance().getTime()))
+    def arr = heure.text.dropRight(2).length() match {
+      case 4 => "0"+heure.text.dropRight(2)
+      case _ => heure.text.dropRight(2)
+    }
+    while(now != arr)
+    {
+      //code christopher
+      println("debut")
+      Thread.sleep(5000)
+      println("fin")
+    }
     def receive={
       case _ =>
     }
