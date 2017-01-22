@@ -57,6 +57,7 @@ object Perturbations {
   def getType(str: String): String = str match {
     case "Bus" => "Bus"
     case "Train" => "RapidTransit"
+    case "Commuter train" => "RapidTransit"
     case "Tram" => "Tramway"
     case "Subway" => "Metro"
   }
