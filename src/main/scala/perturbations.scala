@@ -138,9 +138,9 @@ object Perturbations {
       res
     }
 
-    def ajouteMinutes(dateInit: Date, minute:Int) = {
+    def ajouteMinutes(dateInit: java.util.Date, minute:Int) = {
       val tempsLimiteTemp = Calendar.getInstance()
-      tempsLimiteTemp.setTime(new Date(dateInit))
+      tempsLimiteTemp.setTime(dateInit)
       tempsLimiteTemp.add(Calendar.MINUTE, minute)
       tempsLimiteTemp.getTime()
     }
@@ -157,12 +157,11 @@ object Perturbations {
           val after = res.get.arrivals
           for (i <- 0 to res.get.arrivals.size-1) {
             if(before(i).display_informations.headsign == after(i).display_informations.headsign && before(i).stop_point.name == after(i).stop_point.name) {
-              println(convertDate(before(i).stop_date_time.arrival_date_time))
-            /*  val tempsLimite = ajouteMinutes(convertDate(before(i).stop_date_time.arrival_date_time), 5)
+              val tempsLimite = ajouteMinutes(convertDate(before(i).stop_date_time.arrival_date_time), 5)
               println(tempsLimite)
-              if(convertDate(after.stop_date_time.arrival_date_time) > tempsLimite) {
+              if(convertDate(after(i).stop_date_time.arrival_date_time).after(tempsLimite)) {
                 println("Pertubation !!!")
-              }*/
+              }
             }
           }
           res.get.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" + depart.stop_date_time.arrival_date_time))
