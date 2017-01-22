@@ -147,24 +147,28 @@ object Perturbations {
 
     // On récupère les départs de la ligne et on commence la surveillance
     def surveilleLigne(ligne: Ligne, departs: Departs) = {
-      departs.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" + convertDate(depart.stop_date_time.arrival_date_time)))
+      //departs.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" + convertDate(depart.stop_date_time.arrival_date_time)))
       while (true) {
-        Thread.sleep(6000)
+        Thread.sleep(60000)
         val uri = "https://api.navitia.io/v1/coverage/fr-idf/physical_modes/physical_mode:" + typeLigne + "/lines/" + ligne.id + "/arrivals"
         val res = getDeparts(uri)
         if (res.isDefined) {
           val before = departs.arrivals
           val after = res.get.arrivals
           for (i <- 0 to res.get.arrivals.size-1) {
+            // Pour les trains qui ont le même nom et qui ont la même gare d'arrivée
             if(before(i).display_informations.headsign == after(i).display_informations.headsign && before(i).stop_point.name == after(i).stop_point.name) {
+              /* On véirifie si les nouvelles données sont comparables au précédentes
+              ** Si le retard entre deux date est important (5 minutes ou plus)
+              ** alors on dit qu'il y a perturbatioon
+              */
               val tempsLimite = ajouteMinutes(convertDate(before(i).stop_date_time.arrival_date_time), 5)
-              println(tempsLimite)
               if(convertDate(after(i).stop_date_time.arrival_date_time).after(tempsLimite)) {
                 println("Pertubation !!!")
               }
             }
           }
-          res.get.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" + depart.stop_date_time.arrival_date_time))
+          //res.get.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" + depart.stop_date_time.arrival_date_time))
         } else {
           println("Erreur du serveur, veuillez réessayer")
         }
