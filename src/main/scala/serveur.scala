@@ -20,6 +20,7 @@ import spray.json.DefaultJsonProtocol
 import java.util.Calendar
 import java.text.SimpleDateFormat
 
+
   //Classes pour l'api de trajet
   case class Text(text:String)
   case class Name(name:String)
@@ -47,18 +48,28 @@ import java.text.SimpleDateFormat
   case class IdMdp(id: String, mdp: String)
   case class TrajetGoogle(trajet: Transit)
   case class DemandeTrajet(origine: String, destination: String)
+  //case object Heure
 
   //Acteur qui gère un trajet
   class Trajet(depart: String, destination: String, idmdp: Option[IdMdp]) extends Actor {
+    val system = akka.actor.ActorSystem("system")
+    val simpDate = new SimpleDateFormat("hh:mm");
+    val now = (simpDate.format(Calendar.getInstance().getTime()))
+    //var heure = context.children.toList(0) ! Heure
+    //println(heure)
     val traj = context.actorOf(Props(new apiTrajet()))
     traj ! DemandeTrajet("gare+saint+lazarre+paris+france", "universite+paris+13+villetaneuse+france")
     idmdp match{
-      case Some(IdMdp(id,mdp)) => //val traj = context.actorOf(Props(new apiTrajet()))
-      case None =>
+      case Some(IdMdp(id,mdp)) =>
+        //context.system.scheduler.scheduleOnce(Duration.create(5, TimeUnit.SECONDS), self, akka.actor.PoisonPill, context.system.dispatcher, null);
+        //self ! akka.actor.PoisonPill
+      case None => self ! akka.actor.PoisonPill
     }
     def receive = {
       case Status(msg) => println(msg)
-      case TrajetGoogle(trajet) => trajet.routes.foreach{_.legs.foreach{_.steps.foreach{_.transit_details.foreach{x => context.actorOf(Props(new apitPerturbation(x.line.short_name, x.departure_time, x.line.vehicle)))}}}} //val heure=println(trajet.routes(0).legs(0).arrival_time)
+      case TrajetGoogle(trajet) =>
+        trajet.routes.foreach{_.legs.foreach{_.steps.foreach{_.transit_details.foreach{x => context.actorOf(Props(new apitPerturbation(x.line.short_name, x.departure_time, x.line.vehicle)))}}}};
+        //heure=trajet.routes(0).legs(0).arrival_time.text.dropRight(2);//(context.children.toList(0) ! Heure
       case Perturbation(ligne) => val sms = context.actorOf(Props(new Free(idmdp.get)));sms ! Message("Perturbations%20sur%20la%20ligne%20"+ligne)
     }
   }
@@ -81,6 +92,7 @@ import java.text.SimpleDateFormat
         case 403 => sender ! Status("Le service n'est pas activé ou le login/mot de passe est incorrect")
         case 500 => sender ! Status("Erreur du serveur, veuillez réessayer")
       }
+      self ! akka.actor.PoisonPill
     }
   }
 
@@ -91,13 +103,23 @@ import java.text.SimpleDateFormat
       case 4 => "0"+heure.text.dropRight(2)
       case _ => heure.text.dropRight(2)
     }
+    println(now,arr)
     while(now != arr)
     {
       //code christopher
+      /*
+      {
+        context.parent ! Perturbation(ligne)
+        self ! akka.actor.PoisonPill
+      }
+      */
+
       println("debut")
       Thread.sleep(5000)
       println("fin")
     }
+    self ! akka.actor.PoisonPill
+
     def receive={
       case _ =>
     }
