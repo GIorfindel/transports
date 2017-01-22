@@ -57,8 +57,8 @@ object Perturbations {
   def getType(str: String): String = str match {
     case "Bus" => "Bus"
     case "Train" => "RapidTransit"
-    case "Tramway" => "Tramway"
-    case "Metro" => "Metro"
+    case "Tram" => "Tramway"
+    case "Subway" => "Metro"
   }
 
   // Récupérer la bonne ligne de transport dans une liste
