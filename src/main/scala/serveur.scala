@@ -19,6 +19,7 @@ import akka.http.scaladsl.model._
 import spray.json.DefaultJsonProtocol
 import java.util.Calendar
 import java.text.SimpleDateFormat
+import Perturbations._
 
 
   //Classes pour l'api de trajet
@@ -58,7 +59,7 @@ import java.text.SimpleDateFormat
     //var heure = context.children.toList(0) ! Heure
     //println(heure)
     val traj = context.actorOf(Props(new apiTrajet()))
-    traj ! DemandeTrajet("gare+saint+lazarre+paris+france", "universite+paris+13+villetaneuse+france")
+    traj ! DemandeTrajet(depart, destination)
     idmdp match{
       case Some(IdMdp(id,mdp)) =>
         //context.system.scheduler.scheduleOnce(Duration.create(5, TimeUnit.SECONDS), self, akka.actor.PoisonPill, context.system.dispatcher, null);
@@ -97,26 +98,71 @@ import java.text.SimpleDateFormat
   }
 
   class apitPerturbation(ligne: String, heure: Text, nom: Name) extends Actor{
-    val simpDate = new SimpleDateFormat("hh:mm");
-    val now = (simpDate.format(Calendar.getInstance().getTime()))
-    def arr = heure.text.dropRight(2).length() match {
-      case 4 => "0"+heure.text.dropRight(2)
-      case _ => heure.text.dropRight(2)
-    }
-    println(now,arr)
-    while(now != arr)
-    {
-      //code christopher
-      /*
-      {
-        context.parent ! Perturbation(ligne)
-        self ! akka.actor.PoisonPill
-      }
-      */
+    val typeLigne = getType(nom.name)
+    val nomLigne = ligne.replaceAll("RER " , "")
+    val heureMax = heure.text
 
-      println("debut")
-      Thread.sleep(5000)
-      println("fin")
+    println("Ligne surveillée :"+nomLigne)
+
+    // On récupère le bon réseau (train, bus, tramway, metro)
+    val reseau = getReseau(typeLigne)
+
+    // Si le réseau est correct
+    if (reseau.isDefined) {
+      // On vérifie que la ligne reçu existe dans ce réseau
+      val testLigne = verifieLigne(nomLigne, typeLigne, reseau.get)
+      // Si la ligne existe
+      if(testLigne.isDefined) {
+        val ligne = testLigne.get
+        // On récupère les prochains départs de cette ligne
+        val testDeparts = getDeparts(ligne)
+        // Si on réussi à récupérer les départs de cette ligne
+        if(testDeparts.isDefined) {
+          val departs = testDeparts.get
+          // On lance la surveillance de la ligne
+          departs.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" + convertDate(depart.stop_date_time.arrival_date_time)))
+          val simpDate = new SimpleDateFormat("hh:mm");
+          def now = (simpDate.format(Calendar.getInstance().getTime()))
+          def arr = heureMax.dropRight(2).length() match {
+            case 4 => "0"+heureMax.dropRight(2)
+            case _ => heureMax.dropRight(2)
+          }
+          println(now,arr)
+          while(now != arr) {
+            Thread.sleep(20000)
+            val res = getDeparts(ligne)
+            if (res.isDefined) {
+              val before = departs.arrivals
+              val after = res.get.arrivals
+              for (i <- 0 to res.get.arrivals.size-1) {
+                // Pour les trains qui ont le même nom et qui ont la même gare d'arrivée
+                if(before(i).display_informations.headsign == after(i).display_informations.headsign && before(i).stop_point.name == after(i).stop_point.name) {
+                  /* On véirifie si les nouvelles données sont comparables au précédentes
+                  ** Si le retard entre deux date est important (5 minutes ou plus)
+                  ** alors on dit qu'il y a perturbatioon
+                  */
+                  val tempsLimite = ajouteMinutes(convertDate(before(i).stop_date_time.arrival_date_time), 5)
+                  if(convertDate(after(i).stop_date_time.arrival_date_time).after(tempsLimite)) {
+                    println("Pertubation détectée sur la ligne")
+                    sender ! Perturbation(nomLigne)
+                  }
+                }
+                val departs = res
+              }
+              res.get.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" +  convertDate(depart.stop_date_time.arrival_date_time)))
+            } else {
+              println("Erreur du serveur, veuillez réessayer")
+            }
+          }
+          println("Aucune pertubation détectée sur le temps imparti")
+        } else {
+          println("Impossible de récupérer les départs")
+        }
+      } else {
+        println("Cette ligne n'existe pas")
+      }
+    } else {
+      println("Impossible de récupérer ce réseau")
     }
     self ! akka.actor.PoisonPill
 
@@ -142,6 +188,7 @@ import java.text.SimpleDateFormat
             case 200 =>{
               val ticker = Unmarshal(result.entity).to[Transit]
               val t = Await.result(ticker,10.second)
+              println(t)
               sender ! TrajetGoogle(t)
             }
             case 500 => println("Erreur du serveur, veuillez réessayer")
@@ -153,7 +200,7 @@ import java.text.SimpleDateFormat
 
     val system = ActorSystem("trajet")
 
-    val transport = system.actorOf(Props(new Trajet("test","test", Some(IdMdp("xxx","yyy")))))
+    val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", Some(IdMdp("xxx","yyy")))))
     //transport ! Perturbation("b")
     //transport ! akka.actor.PoisonPill
   }
