@@ -34,7 +34,6 @@ object Perturbations {
   implicit val ligneFormat = jsonFormat6(Ligne)
   implicit val reseauFormat = jsonFormat1(Reseau)
 
-
   // Classes pour les requetes de departs
   final case class Display(direction: String, headsign: String)
   final case class StopPoint(name: String)
@@ -81,9 +80,25 @@ object Perturbations {
     val reponseReseau = Await.result(requeteReseau, duration).asInstanceOf[HttpResponse]
     reponseReseau._1.intValue() match {
       case 200 => {
-
         val ticker = Unmarshal(reponseReseau.entity).to[Reseau]
         val res = Await.result(ticker, 10.second)
+        // ON récupère le reste des bus
+        if(typeLigne == "Bus") {
+          val uri2 = "https://api.navitia.io/v1/coverage/fr-idf/physical_modes/physical_mode:Bus/lines?count=1000&start_page=1"
+          val requeteReseau2: Future[HttpResponse] =
+            Http().singleRequest(HttpRequest(
+              uri = uri2,
+              headers = List(authorization)))
+          val reponseReseau2 = Await.result(requeteReseau2, duration).asInstanceOf[HttpResponse]
+          reponseReseau2._1.intValue() match {
+            case 200 => {
+              val ticker2 = Unmarshal(reponseReseau2.entity).to[Reseau]
+              val res2 = Await.result(ticker2, 10.second)
+              return Some(Reseau(res.lines:::res2.lines))
+            }
+            case 500 => None
+          }
+        }
         Some(res)
       }
       case 500 => None
@@ -117,7 +132,7 @@ object Perturbations {
     res
   }
 
-  def ajouteMinutes(dateInit: java.util.Date, minute:Int) = {
+  def ajouteMinutes(dateInit: java.util.Date, minute: Int) = {
     val tempsLimiteTemp = Calendar.getInstance()
     tempsLimiteTemp.setTime(dateInit)
     tempsLimiteTemp.add(Calendar.MINUTE, minute)
@@ -125,49 +140,49 @@ object Perturbations {
   }
 
   // On vérifie les infos de la ligne
-  def verifieLigne(nomLigne: String, typeLigne: String, res: Reseau):Option[Ligne] = {
+  def verifieLigne(nomLigne: String, typeLigne: String, res: Reseau): Option[Ligne] = {
     val testLigne = getLigne(nomLigne, res)
     if (testLigne.isDefined) {
       // Si la ligne existe, on récupère sa ligne
       Some(testLigne.get)
-    }
-    else {
+    } else {
       None
     }
   }
 
   // On récupère les départs de la ligne et on commence la surveillance
-  def surveilleLigne(ligne: Ligne, departs: Departs, heureMax:String): Boolean = {
+  def surveilleLigne(ligne: Ligne, departs: Departs, heureMax: String): Boolean = {
     departs.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" + convertDate(depart.stop_date_time.arrival_date_time)))
     val simpDate = new SimpleDateFormat("hh:mm");
     def now = (simpDate.format(Calendar.getInstance().getTime()))
     def arr = heureMax.dropRight(2).length() match {
-      case 4 => "0"+heureMax.dropRight(2)
+      case 4 => "0" + heureMax.dropRight(2)
       case _ => heureMax.dropRight(2)
     }
-    println(now,arr)
-    while(now != arr) {
+    println(now, arr)
+    while (now != arr) {
       Thread.sleep(20000)
       val res = getDeparts(ligne)
       if (res.isDefined) {
         val before = departs.arrivals
         val after = res.get.arrivals
-        for (i <- 0 to res.get.arrivals.size-1) {
+        for (i <- 0 to res.get.arrivals.size - 1) {
           // Pour les trains qui ont le même nom et qui ont la même gare d'arrivée
-          if(before(i).display_informations.headsign == after(i).display_informations.headsign && before(i).stop_point.name == after(i).stop_point.name) {
+          if (before(i).display_informations.headsign == after(i).display_informations.headsign && before(i).stop_point.name == after(i).stop_point.name) {
             /* On véirifie si les nouvelles données sont comparables au précédentes
             ** Si le retard entre deux date est important (5 minutes ou plus)
             ** alors on dit qu'il y a perturbatioon
             */
             val tempsLimite = ajouteMinutes(convertDate(before(i).stop_date_time.arrival_date_time), 5)
-            if(convertDate(after(i).stop_date_time.arrival_date_time).after(tempsLimite)) {
+            if (convertDate(after(i).stop_date_time.arrival_date_time).after(tempsLimite)) {
               println("Pertubation détectée sur la ligne")
               return true
             }
           }
           val departs = res
         }
-        res.get.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" +  convertDate(depart.stop_date_time.arrival_date_time)))
+        println("*=========================================================================*")
+        res.get.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" + convertDate(depart.stop_date_time.arrival_date_time)))
       } else {
         println("Erreur du serveur, veuillez réessayer")
       }
@@ -179,8 +194,8 @@ object Perturbations {
   def main(args: Array[String]) {
 
     // Données reçu par Google
-    val typeLigne = getType("Train")
-    val nomLigne = "B"
+    val typeLigne = getType("Bus")
+    val nomLigne = "24"
     val heureMax = "02:20pm"
 
     // On récupère le bon réseau (train, bus, tramway, metro)
@@ -191,12 +206,12 @@ object Perturbations {
       // On vérifie que la ligne reçu existe dans ce réseau
       val testLigne = verifieLigne(nomLigne, typeLigne, reseau.get)
       // Si la ligne existe
-      if(testLigne.isDefined) {
+      if (testLigne.isDefined) {
         val ligne = testLigne.get
         // On récupère les prochains départs de cette ligne
         val testDeparts = getDeparts(ligne)
         // Si on réussi à récupérer les départs de cette ligne
-        if(testDeparts.isDefined) {
+        if (testDeparts.isDefined) {
           val departs = testDeparts.get
           // On lance la surveillance de la ligne
           surveilleLigne(ligne, departs, heureMax)
