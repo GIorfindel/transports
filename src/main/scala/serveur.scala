@@ -216,10 +216,10 @@ import Perturbations._
 
     val system = ActorSystem("trajet")
 
-    //val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", Some(IdMdp("28679207","YxswyEjk28PXNM")))))
-    //val transport = system.actorOf(Props(new Trajet("test","17+place+des+reflets+courbevoie", Some(IdMdp("28679207","YxswyEjk28PXNM")))))
+    //val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", Some(IdMdp("","")))))
+    //val transport = system.actorOf(Props(new Trajet("test","17+place+des+reflets+courbevoie", Some(IdMdp("","")))))
     //val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", None)))
-    //val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", Some(IdMdp("xxxxxx","YxswyEjk28PXNM")))))
+    //val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", Some(IdMdp("xxxxxx","")))))
     val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", Some(IdMdp("xxx","yyy")))))
 
 
