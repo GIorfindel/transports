@@ -159,7 +159,6 @@ object Perturbations {
       case 4 => "0" + heureMax.dropRight(2)
       case _ => heureMax.dropRight(2)
     }
-    println(now, arr)
     while (now != arr) {
       Thread.sleep(20000)
       val res = getDeparts(ligne)
@@ -174,7 +173,6 @@ object Perturbations {
             ** alors on dit qu'il y a perturbatioon
             */
             val tempsLimite = ajouteMinutes(convertDate(before(i).stop_date_time.arrival_date_time), 5)
-            println(tempsLimite)
             if (convertDate(after(i).stop_date_time.arrival_date_time).compareTo(tempsLimite) > 0) {
               println("Pertubation détectée sur la ligne")
               return true
