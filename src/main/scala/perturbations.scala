@@ -174,7 +174,8 @@ object Perturbations {
             ** alors on dit qu'il y a perturbatioon
             */
             val tempsLimite = ajouteMinutes(convertDate(before(i).stop_date_time.arrival_date_time), 5)
-            if (convertDate(after(i).stop_date_time.arrival_date_time).after(tempsLimite)) {
+            println(tempsLimite)
+            if (convertDate(after(i).stop_date_time.arrival_date_time).compareTo(tempsLimite) > 0) {
               println("Pertubation détectée sur la ligne")
               return true
             }
