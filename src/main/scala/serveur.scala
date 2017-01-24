@@ -64,14 +64,19 @@ import Perturbations._
       case Some(IdMdp(id,mdp)) =>
         //context.system.scheduler.scheduleOnce(Duration.create(5, TimeUnit.SECONDS), self, akka.actor.PoisonPill, context.system.dispatcher, null);
         //self ! akka.actor.PoisonPill
-      case None => self ! akka.actor.PoisonPill
+      case None =>Thread.sleep(5000); println("Trajet: fin de l'acteur\n");self ! akka.actor.PoisonPill
     }
     def receive = {
-      case Status(msg) => println(msg)
+      case Status(msg) => println("Status de l'envoie du sms: "+msg+"\n")
       case TrajetGoogle(trajet) =>
-        trajet.routes.foreach{_.legs.foreach{_.steps.foreach{_.transit_details.foreach{x => context.actorOf(Props(new apitPerturbation(x.line.short_name, x.departure_time, x.line.vehicle)))}}}};
+        println("Trajet: demande d'itinéraire\n")
+        idmdp match {
+          case Some(IdMdp(id,mdp)) =>
+            trajet.routes.foreach{_.legs.foreach{_.steps.foreach{_.transit_details.foreach{x => context.actorOf(Props(new apitPerturbation(x.line.short_name, x.arrival_time, x.line.vehicle)))}}}};
+          case None => println("Pas d'identifiants fournis: les acteurs de suivie de perturbations ne sont pas instanciés")
+        }
         //heure=trajet.routes(0).legs(0).arrival_time.text.dropRight(2);//(context.children.toList(0) ! Heure
-      case Perturbation(ligne) => val sms = context.actorOf(Props(new Free(idmdp.get)));sms ! Message("Perturbations%20sur%20la%20ligne%20"+ligne)
+      case Perturbation(ligne) => println("Trajet: envoie de requête SMS");val sms = context.actorOf(Props(new Free(idmdp.get)));sms ! Message("Perturbations%20sur%20la%20ligne%20"+ligne)
     }
   }
 
@@ -82,6 +87,7 @@ import Perturbations._
     val duration = Duration(10000, MILLISECONDS)
     def receive = {
       case Message(msg) =>
+      println("SMS: requête d'envoie reçue");
       val responseFuture: Future[HttpResponse] =
       Http().singleRequest(HttpRequest(uri = "https://smsapi.free-mobile.fr/sendmsg?user="+idmdp.id+"&pass="+idmdp.mdp+"&msg="+msg))
       val result = Await.result(responseFuture, duration).asInstanceOf[HttpResponse]
@@ -93,7 +99,7 @@ import Perturbations._
         case 403 => sender ! Status("Le service n'est pas activé ou le login/mot de passe est incorrect")
         case 500 => sender ! Status("Erreur du serveur, veuillez réessayer")
       }
-      self ! akka.actor.PoisonPill
+      println("SMS: fin de l'acteur\n");self ! akka.actor.PoisonPill
     }
   }
 
@@ -101,8 +107,9 @@ import Perturbations._
     val typeLigne = getType(nom.name)
     val nomLigne = ligne.replaceAll("RER " , "")
     val heureMax = heure.text
+    var pert = false
 
-    println("Ligne surveillée :"+nomLigne)
+    println("Perturbation: ligne "+nomLigne +" surveillée")
 
     // On récupère le bon réseau (train, bus, tramway, metro)
     val reseau = getReseau(typeLigne)
@@ -120,15 +127,15 @@ import Perturbations._
         if(testDeparts.isDefined) {
           val departs = testDeparts.get
           // On lance la surveillance de la ligne
-          departs.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" + convertDate(depart.stop_date_time.arrival_date_time)))
+          //departs.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" + convertDate(depart.stop_date_time.arrival_date_time)))
           val simpDate = new SimpleDateFormat("hh:mm");
           def now = (simpDate.format(Calendar.getInstance().getTime()))
           def arr = heureMax.dropRight(2).length() match {
             case 4 => "0"+heureMax.dropRight(2)
             case _ => heureMax.dropRight(2)
           }
-          println(now,arr)
-          while(now != arr) {
+          println("Ligne "+nomLigne+": il est "+now+", arrivée prévue à "+arr)
+          while((now != arr) && !pert) {
             Thread.sleep(20000)
             val res = getDeparts(ligne)
             if (res.isDefined) {
@@ -142,29 +149,36 @@ import Perturbations._
                   ** alors on dit qu'il y a perturbatioon
                   */
                   val tempsLimite = ajouteMinutes(convertDate(before(i).stop_date_time.arrival_date_time), 5)
-                  if(convertDate(after(i).stop_date_time.arrival_date_time).after(tempsLimite)) {
-                    println("Pertubation détectée sur la ligne")
-                    sender ! Perturbation(nomLigne)
+                  if (convertDate(after(i).stop_date_time.arrival_date_time).compareTo(tempsLimite) < 0) {
+                    pert = true
                   }
                 }
                 val departs = res
               }
-              res.get.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" +  convertDate(depart.stop_date_time.arrival_date_time)))
+              //res.get.arrivals.foreach(depart => println(depart.display_informations.headsign + " / " + depart.stop_point.name + " /\t\t" +  convertDate(depart.stop_date_time.arrival_date_time)))
             } else {
               println("Erreur du serveur, veuillez réessayer")
             }
           }
-          println("Aucune pertubation détectée sur le temps imparti")
+          if (pert==true)
+          {
+            println("Pertubation: peturbation détectée sur la ligne "+nomLigne+"\n");
+            context.parent ! Perturbation(nomLigne);
+            self ! akka.actor.PoisonPill
+          }
+          else{
+            println("Aucune pertubation détectée dans le temps imparti sur la ligne "+nomLigne)
+          }
         } else {
-          println("Impossible de récupérer les départs")
+          println("Impossible de récupérer les départs sur la ligne "+nomLigne)
         }
       } else {
-        println("Cette ligne n'existe pas")
+        println("La ligne "+nomLigne+" n'existe pas")
       }
     } else {
       println("Impossible de récupérer ce réseau")
     }
-    self ! akka.actor.PoisonPill
+    println("Perturbation: fin de l'acteur ligne "+nomLigne+"\n");self ! akka.actor.PoisonPill
 
     def receive={
       case _ =>
@@ -180,6 +194,7 @@ import Perturbations._
 
     def receive = {
       case DemandeTrajet(origine, destination) =>
+      println("apiTrajet: demande de trajet reçue");
         val responseFuture: Future[HttpResponse] =
           Http().singleRequest(HttpRequest(uri = s"https://maps.googleapis.com/maps/api/directions/json?origin=${origine}&destination=${destination}&mode=transit&key=API"))
           val result = Await.result(responseFuture, duration).asInstanceOf[HttpResponse]
@@ -188,11 +203,12 @@ import Perturbations._
             case 200 =>{
               val ticker = Unmarshal(result.entity).to[Transit]
               val t = Await.result(ticker,10.second)
-              println(t)
+              println("apiTrajet: itinéraire trouvé\n"+t)
               sender ! TrajetGoogle(t)
             }
             case 500 => println("Erreur du serveur, veuillez réessayer")
           }
+          println("apiTrajet: fin de l'acteur\n");self ! akka.actor.PoisonPill
         }
       }
 
@@ -200,7 +216,13 @@ import Perturbations._
 
     val system = ActorSystem("trajet")
 
+    //val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", Some(IdMdp("28679207","YxswyEjk28PXNM")))))
+    //val transport = system.actorOf(Props(new Trajet("test","17+place+des+reflets+courbevoie", Some(IdMdp("28679207","YxswyEjk28PXNM")))))
+    //val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", None)))
+    //val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", Some(IdMdp("xxxxxx","YxswyEjk28PXNM")))))
     val transport = system.actorOf(Props(new Trajet("vert-galant+villepinte","17+place+des+reflets+courbevoie", Some(IdMdp("xxx","yyy")))))
+
+
     //transport ! Perturbation("b")
     //transport ! akka.actor.PoisonPill
   }
